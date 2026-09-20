@@ -39,16 +39,25 @@ UI_REGRESSION_DB_PORT=3306
 
 ## Checkout
 
-The fork runner uses shallow blobless sparse checkout to reduce the initial Git transfer:
+The fork practice workflow avoids a full Git checkout because the test server's
+GitHub TLS connection was unstable. It downloads a trimmed archive containing
+only the directories required by UI regression:
 
-```yaml
-fetch-depth: 1
-filter: blob:none
-sparse-checkout: |
-  .github
-  automation
-  frontend
+```text
+.github/
+automation/
+frontend/
 ```
+
+The archive is stored for fork practice at:
+
+```text
+automation/testdata/bootstrap/ui-regression-src.tar.gz
+```
+
+This is a practice-only workaround. The production repository should use a
+stable runner/network path or a local Git mirror instead of committing a
+generated archive.
 
 ## Required Secrets
 
