@@ -101,10 +101,12 @@ jobs:
 
       - name: Install automation dependencies
         run: |
-          python3 -m pip install \
-            -i https://pypi.tuna.tsinghua.edu.cn/simple \
-            --timeout 60 \
+          python3 -m pip --isolated install \
+            --index-url https://mirrors.aliyun.com/pypi/simple/ \
+            --trusted-host mirrors.aliyun.com \
+            --timeout 120 \
             --retries 5 \
+            --disable-pip-version-check \
             pytest \
             pytest-asyncio \
             httpx \
