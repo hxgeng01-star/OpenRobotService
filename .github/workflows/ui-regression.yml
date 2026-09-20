@@ -46,14 +46,21 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          filter: blob:none
-          sparse-checkout: |
-            .github
-            automation
-            frontend
+      - name: Download repository archive
+        run: |
+          set -euo pipefail
+          archive=/tmp/openrobotservice.tar.gz
+          rm -f "$archive"
+          curl -fL \
+            --http1.1 \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            -o "$archive" \
+            "https://codeload.github.com/${GITHUB_REPOSITORY}/tar.gz/${GITHUB_SHA}"
+          mkdir -p "$GITHUB_WORKSPACE"
+          find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          tar -xzf "$archive" -C "$GITHUB_WORKSPACE" --strip-components=1
 
       - name: Validate required configuration
         env:
