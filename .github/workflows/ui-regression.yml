@@ -65,6 +65,11 @@ jobs:
           find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
           tar -xzf "$archive" -C "$GITHUB_WORKSPACE" --strip-components=1
 
+      - name: Configure local runner PATH
+        run: |
+          echo "/home/usp-a/miniconda3/bin" >> "$GITHUB_PATH"
+          echo "/home/usp-a/.local/bin" >> "$GITHUB_PATH"
+
       - name: Validate required configuration
         env:
           UI_REGRESSION_U1_PASSWORD: ${{ secrets.REAL_U1_PASSWORD }}
