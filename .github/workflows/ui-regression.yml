@@ -59,14 +59,14 @@ jobs:
         env:
           UI_REGRESSION_U1_PASSWORD: ${{ secrets.REAL_U1_PASSWORD }}
           UI_REGRESSION_U2_PASSWORD: ${{ secrets.REAL_U2_PASSWORD }}
-          UI_REGRESSION_CLEANUP_PASSWORD: ${{ secrets.UI_REGRESSION_CLEANUP_PASSWORD }}
         run: |
           set -euo pipefail
+          # Cleanup credentials are optional for fork practice. Missing values
+          # are reported as cleanup warnings instead of failing the job.
           missing=0
           for name in \
             UI_REGRESSION_U1_PASSWORD \
-            UI_REGRESSION_U2_PASSWORD \
-            UI_REGRESSION_CLEANUP_PASSWORD
+            UI_REGRESSION_U2_PASSWORD
           do
             if [ -z "${!name:-}" ]; then
               echo "::error::$name is not configured"

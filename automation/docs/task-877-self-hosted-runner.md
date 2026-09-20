@@ -37,7 +37,7 @@ automation/src/ui_regression/tests + automation/src/remote/tests
 1. 在 fork 配置以下 Secrets：
    - `REAL_U1_PASSWORD`
    - `REAL_U2_PASSWORD`
-   - `UI_REGRESSION_CLEANUP_PASSWORD`
+   - `UI_REGRESSION_CLEANUP_PASSWORD`（可选；缺失时只记录清理告警）
 2. 运行 self-hosted UI Regression。
 3. 确认 UI 场景和 6 条 Smoke 通过。
 4. 评估是否恢复 DB 补偿清理。
