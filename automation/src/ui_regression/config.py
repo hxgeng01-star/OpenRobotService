@@ -20,6 +20,7 @@ class UiRegressionConfig:
     backend_url: str = "http://127.0.0.1:19400"
     ai_url: str = "http://127.0.0.1:19411"
     upstream_timeout: float = 60.0
+    direct: bool = False
     ssh_host: str = ""
     ssh_user: str = ""
     ssh_port: int = 22
@@ -55,6 +56,7 @@ class UiRegressionConfig:
             upstream_timeout=float(
                 os.getenv("UI_REGRESSION_UPSTREAM_TIMEOUT", "60")
             ),
+            direct=os.getenv("UI_REGRESSION_DIRECT", "0") == "1",
             ssh_host=os.getenv("UI_REGRESSION_SSH_HOST", ""),
             ssh_user=os.getenv("UI_REGRESSION_SSH_USER", ""),
             ssh_port=int(os.getenv("UI_REGRESSION_SSH_PORT", "22")),

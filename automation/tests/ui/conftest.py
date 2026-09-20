@@ -80,7 +80,7 @@ def ui_regression_runtime() -> Iterator[UiRegressionRuntime]:
     config = UiRegressionConfig.from_env()
     if not config.frontend_dist.joinpath("index.html").is_file():
         pytest.fail(f"frontend dist is missing: {config.frontend_dist}")
-    if not config.ssh_host or not config.ssh_user:
+    if not config.direct and (not config.ssh_host or not config.ssh_user):
         pytest.fail("UI_REGRESSION_SSH_HOST and UI_REGRESSION_SSH_USER are required")
 
     u1_username = os.getenv("UI_REGRESSION_U1_USERNAME", "")
@@ -90,17 +90,28 @@ def ui_regression_runtime() -> Iterator[UiRegressionRuntime]:
     if not all((u1_username, u1_password, u2_username, u2_password)):
         pytest.fail("U1/U2 UI regression credentials are required")
 
-    tunnel_manager = UiTunnelManager(config)
-    backend_url, ai_url = tunnel_manager.start()
+    tunnel_manager: UiTunnelManager | None = None
+    if config.direct:
+        backend_url = config.backend_url
+        ai_url = config.ai_url
+    else:
+        tunnel_manager = UiTunnelManager(config)
+        backend_url, ai_url = tunnel_manager.start()
 
     db_cleanup_config: DatabaseCleanupConfig | None = None
     if config.db_cleanup_enabled:
         try:
+            db_port = (
+                config.db_local_port
+                if config.direct
+                else tunnel_manager.db_local_port
+            )
             db_cleanup_config = DatabaseCleanupConfig.from_env(
-                port_override=tunnel_manager.db_local_port
+                port_override=db_port
             )
         except Exception:
-            tunnel_manager.stop()
+            if tunnel_manager is not None:
+                tunnel_manager.stop()
             raise
 
     gateway_port = free_port()
@@ -171,4 +182,5 @@ def ui_regression_runtime() -> Iterator[UiRegressionRuntime]:
         playwright.stop()
         server.should_exit = True
         server_thread.join(timeout=10)
-        tunnel_manager.stop()
+        if tunnel_manager is not None:
+            tunnel_manager.stop()

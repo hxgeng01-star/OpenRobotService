@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - test
+      - practice-self-hosted-ui-regression
 
 permissions:
   contents: write
@@ -19,22 +20,16 @@ env:
   NODE_VERSION: "22"
   UI_REGRESSION_E2E: "1"
   UI_REGRESSION_HEADLESS: "1"
-  UI_REGRESSION_SSH_HOST: ${{ vars.UI_REGRESSION_SSH_HOST }}
-  UI_REGRESSION_SSH_USER: ${{ vars.UI_REGRESSION_SSH_USER || 'usp-a' }}
-  UI_REGRESSION_SSH_PORT: ${{ vars.UI_REGRESSION_SSH_PORT || '8802' }}
-  UI_REGRESSION_BACKEND_REMOTE_PORT: "9400"
-  UI_REGRESSION_BACKEND_LOCAL_PORT: "19400"
-  UI_REGRESSION_AI_REMOTE_PORT: "9411"
-  UI_REGRESSION_AI_LOCAL_PORT: "19411"
-  UI_REGRESSION_TUNNEL_TIMEOUT: "60"
+  UI_REGRESSION_DIRECT: "1"
+  UI_REGRESSION_BACKEND_URL: "http://127.0.0.1:9400"
+  UI_REGRESSION_AI_URL: "http://127.0.0.1:9411"
   UI_REGRESSION_U1_USERNAME: ${{ vars.UI_REGRESSION_U1_USERNAME || 'u1_auto' }}
   UI_REGRESSION_U2_USERNAME: ${{ vars.UI_REGRESSION_U2_USERNAME || 'u2_auto' }}
   UI_REGRESSION_CLEANUP_USERNAME: ${{ vars.UI_REGRESSION_CLEANUP_USERNAME || 'admin' }}
-  UI_REGRESSION_DB_CLEANUP_ENABLED: "1"
+  UI_REGRESSION_DB_CLEANUP_ENABLED: "0"
   UI_REGRESSION_DB_HOST: "127.0.0.1"
-  UI_REGRESSION_DB_PORT: "19402"
-  UI_REGRESSION_DB_REMOTE_PORT: "3306"
-  UI_REGRESSION_DB_LOCAL_PORT: "19402"
+  UI_REGRESSION_DB_PORT: "3306"
+  UI_REGRESSION_DB_LOCAL_PORT: "3306"
   UI_REGRESSION_DB_USER: ${{ vars.UI_REGRESSION_DB_USER || 'automation_cleanup' }}
   UI_REGRESSION_DB_NAME: ${{ vars.UI_REGRESSION_DB_NAME || 'helpdesk_test' }}
   UI_REGRESSION_CLEANUP_PROJECT_ID: ${{ vars.UI_REGRESSION_CLEANUP_PROJECT_ID || 'Leo_test' }}
@@ -47,29 +42,31 @@ env:
 jobs:
   ui-regression:
     name: UI chain and real environment smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ors-test]
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            .github
+            automation
+            frontend
 
       - name: Validate required configuration
         env:
-          TEST_SSH_PRIVATE_KEY: ${{ secrets.TEST_SSH_PRIVATE_KEY }}
           UI_REGRESSION_U1_PASSWORD: ${{ secrets.REAL_U1_PASSWORD }}
           UI_REGRESSION_U2_PASSWORD: ${{ secrets.REAL_U2_PASSWORD }}
           UI_REGRESSION_CLEANUP_PASSWORD: ${{ secrets.UI_REGRESSION_CLEANUP_PASSWORD }}
-          UI_REGRESSION_DB_PASSWORD: ${{ secrets.UI_REGRESSION_DB_PASSWORD }}
         run: |
           set -euo pipefail
           missing=0
           for name in \
-            TEST_SSH_PRIVATE_KEY \
-            UI_REGRESSION_SSH_HOST \
             UI_REGRESSION_U1_PASSWORD \
             UI_REGRESSION_U2_PASSWORD \
-            UI_REGRESSION_CLEANUP_PASSWORD \
-            UI_REGRESSION_DB_PASSWORD
+            UI_REGRESSION_CLEANUP_PASSWORD
           do
             if [ -z "${!name:-}" ]; then
               echo "::error::$name is not configured"
@@ -78,42 +75,21 @@ jobs:
           done
           test "$missing" -eq 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Java and Allure CLI
+      - name: Validate self-hosted toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre-headless
-          npm install -g allure-commandline
+          python3 --version
+          node --version
+          npm --version
+          java -version
+          allure --version
 
       - name: Install automation dependencies
         run: |
-          pip install -e automation/
-          python -m playwright install --with-deps chromium
+          python3 -m pip install -e automation/
+          python3 -m playwright install chromium
 
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
-
-      - name: Prepare SSH key
-        env:
-          TEST_SSH_PRIVATE_KEY: ${{ secrets.TEST_SSH_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$TEST_SSH_PRIVATE_KEY" | tr -d '\r' > "$HOME/.ssh/ci_key"
-          chmod 600 "$HOME/.ssh/ci_key"
-          echo "UI_REGRESSION_SSH_KEY=$HOME/.ssh/ci_key" >> "$GITHUB_ENV"
-
-      - name: Preflight real environment SSH forwards
-        run: python automation/scripts/cli-check-ui-regression-ssh.py
 
       - name: Build frontend
         run: npm run build --prefix frontend
@@ -123,7 +99,6 @@ jobs:
           UI_REGRESSION_U1_PASSWORD: ${{ secrets.REAL_U1_PASSWORD }}
           UI_REGRESSION_U2_PASSWORD: ${{ secrets.REAL_U2_PASSWORD }}
           UI_REGRESSION_CLEANUP_PASSWORD: ${{ secrets.UI_REGRESSION_CLEANUP_PASSWORD }}
-          UI_REGRESSION_DB_PASSWORD: ${{ secrets.UI_REGRESSION_DB_PASSWORD }}
         run: |
           set -o pipefail
           mkdir -p automation/output
