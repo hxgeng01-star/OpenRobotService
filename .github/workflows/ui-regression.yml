@@ -46,14 +46,21 @@ jobs:
         run: |
           set -euo pipefail
           archive=/tmp/openrobotservice.tar.gz
+          local_archive=/home/usp-a/actions-runner/ui-regression-src.tar.gz
           rm -f "$archive"
-          curl -fL \
-            --http1.1 \
-            --retry 5 \
-            --retry-all-errors \
-            --retry-delay 5 \
-            -o "$archive" \
-            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/automation/testdata/bootstrap/ui-regression-src.tar.gz"
+          if [ -f "$local_archive" ]; then
+            cp "$local_archive" "$archive"
+          else
+            curl -fL \
+              --http1.1 \
+              --retry 5 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              -o "$archive" \
+              "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/automation/testdata/bootstrap/ui-regression-src.tar.gz"
+          fi
+          echo "0699ada0329e2948cdd42e815c80c9d382c6db86de717e83d2b15be76dc504ef  $archive" \
+            | sha256sum -c -
           mkdir -p "$GITHUB_WORKSPACE"
           find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
           tar -xzf "$archive" -C "$GITHUB_WORKSPACE" --strip-components=1
