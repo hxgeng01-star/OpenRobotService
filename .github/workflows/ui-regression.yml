@@ -11,10 +11,6 @@ permissions:
   contents: write
   actions: read
 
-concurrency:
-  group: ui-regression-test
-  cancel-in-progress: false
-
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "22"
