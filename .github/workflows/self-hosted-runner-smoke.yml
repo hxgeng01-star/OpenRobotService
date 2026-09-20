@@ -1,0 +1,35 @@
+name: Self-hosted Runner Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - practice-self-hosted-runner-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Local test environment access
+    runs-on: [self-hosted, linux, x64, ors-test]
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show runner identity
+        run: |
+          whoami
+          hostname
+          pwd
+          uname -a
+
+      - name: Check backend health
+        run: curl -fsS --max-time 10 http://127.0.0.1:9400/api/health
+
+      - name: Check automation AI health
+        run: curl -fsS --max-time 10 http://127.0.0.1:9411/health
+
+      - name: Check database port
+        run: timeout 5 bash -c '</dev/tcp/127.0.0.1/3306'
