@@ -34,12 +34,14 @@ env:
   AUTOMATION_ENV: local
   ALLURE_AUTO_OPEN: "0"
   JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
+  LD_LIBRARY_PATH: "/home/usp-a/miniconda3/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu:/usr/lib"
+  TMPDIR: "/home/usp-a/tmp"
 
 jobs:
   ui-regression:
     name: UI chain and real environment smoke
     runs-on: [self-hosted, linux, x64, ors-test]
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Download repository archive
@@ -67,6 +69,7 @@ jobs:
 
       - name: Configure local runner PATH
         run: |
+          mkdir -p "$TMPDIR"
           echo "/home/usp-a/miniconda3/bin" >> "$GITHUB_PATH"
           echo "/home/usp-a/.nvm/versions/node/v24.13.1/bin" >> "$GITHUB_PATH"
           echo "/home/usp-a/.local/bin" >> "$GITHUB_PATH"
@@ -101,20 +104,26 @@ jobs:
 
       - name: Install automation dependencies
         run: |
-          python3 -m pip --isolated install \
-            --index-url https://mirrors.aliyun.com/pypi/simple/ \
-            --trusted-host mirrors.aliyun.com \
-            --timeout 120 \
-            --retries 5 \
-            --disable-pip-version-check \
-            pytest \
-            pytest-asyncio \
-            httpx \
-            fastapi \
-            uvicorn \
-            playwright \
-            allure-pytest \
-            pymysql
+          if ! python3 -c \
+            "import allure, fastapi, httpx, playwright, pymysql, pytest, pytest_asyncio"
+          then
+            python3 -m pip --isolated install \
+              --index-url https://mirrors.aliyun.com/pypi/simple/ \
+              --trusted-host mirrors.aliyun.com \
+              --timeout 120 \
+              --retries 5 \
+              --disable-pip-version-check \
+              pytest \
+              pytest-asyncio \
+              httpx \
+              fastapi \
+              uvicorn \
+              playwright \
+              allure-pytest \
+              pymysql
+          else
+            echo "Automation dependencies already installed"
+          fi
           python3 -m playwright install chromium
 
       - name: Install frontend dependencies
